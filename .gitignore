@@ -1,0 +1,9 @@
+﻿venv/
+__pycache__/
+*.pyc
+logs/
+tmp_audio/
+src/credentials/
+src/models/*.onnx
+src/models/whisper/
+.env

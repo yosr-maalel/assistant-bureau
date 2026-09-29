@@ -1,0 +1,57 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Assistant Bureau</title>
+<style>
+:root{--c:#19d3ff;--bg:#04080f;--txt:#d6f3ff}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% 30%,#0a1c2e,var(--bg) 70%);color:var(--txt);font-family:"Segoe UI",system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;padding:24px;gap:18px}
+body[data-s=LISTENING]{--c:#ff3b4e}body[data-s=PROCESSING]{--c:#ffb020}body[data-s=SPEAKING]{--c:#39ff9c}body[data-s=LOADING]{--c:#6b7a8a}
+h1{margin:0;font-weight:200;letter-spacing:.35em;font-size:1.1rem;color:var(--c);transition:color .4s}
+.orb{width:180px;height:180px;border-radius:50%;border:2px solid var(--c);box-shadow:0 0 40px var(--c),inset 0 0 40px color-mix(in srgb,var(--c) 40%,transparent);background:radial-gradient(circle,color-mix(in srgb,var(--c) 35%,transparent),transparent 70%);transition:all .4s;animation:idle 4s ease-in-out infinite}
+body[data-s=LISTENING] .orb{animation:pulse .8s ease-in-out infinite}
+body[data-s=PROCESSING] .orb{animation:spin 1.2s linear infinite;border-style:dashed}
+body[data-s=SPEAKING] .orb{animation:pulse 1.2s ease-in-out infinite}
+@keyframes idle{50%{transform:scale(1.04)}}@keyframes pulse{50%{transform:scale(1.14)}}@keyframes spin{to{transform:rotate(360deg)}}
+#state{font-size:1.6rem;letter-spacing:.3em;color:var(--c);transition:color .4s;min-height:2rem}
+canvas{width:min(560px,100%);height:70px}
+.btns{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
+button{font:600 1.05rem "Segoe UI",system-ui,sans-serif;letter-spacing:.12em;padding:16px 30px;border-radius:10px;border:1px solid var(--c);background:#0a1626;color:var(--txt);cursor:pointer;transition:.25s}
+button:hover:not(:disabled){background:var(--c);color:#001018}button:disabled{opacity:.3;cursor:not-allowed}
+#notice{color:#ffb020;min-height:1.2rem;font-size:.9rem}
+#log{width:min(680px,100%);flex:1;max-height:34vh;overflow:auto;display:flex;flex-direction:column;gap:10px}
+.m{max-width:80%;padding:10px 14px;border-radius:12px;line-height:1.4;animation:in .3s}
+.m.user{align-self:flex-end;background:#12324a;border:1px solid #1c5f8a}
+.m.assistant{align-self:flex-start;background:#0d2a22;border:1px solid #1d7a58}
+@keyframes in{from{opacity:0;transform:translateY(6px)}}
+</style></head><body data-s="LOADING">
+<h1>ASSISTANT BUREAU</h1><div class="orb"></div><div id="state">⏳ CHARGEMENT…</div>
+<canvas id="wave" width="560" height="70"></canvas>
+<div class="btns">
+<button id="go" disabled>🎙 START TALKING</button>
+<button id="end" disabled>⏹ STOP TALKING</button>
+<button id="new" disabled>🗑 NOUVELLE CONVERSATION</button>
+</div>
+<div id="notice"></div><div id="log"></div>
+<script>
+const L={LOADING:"⏳ CHARGEMENT…",READY:"READY",LISTENING:"🔴 LISTENING…",PROCESSING:"⚙️ PROCESSING",SPEAKING:"🔊 SPEAKING"};
+const $=id=>document.getElementById(id),cv=$("wave"),g=cv.getContext("2d");
+let lv=Array(56).fill(0),n=-1,st="LOADING";
+const post=p=>fetch(p,{method:"POST"});
+$("go").onclick=()=>post("/api/start");
+$("end").onclick=()=>post("/api/stop");
+$("new").onclick=()=>post("/api/reset");
+addEventListener("keydown",e=>{if(e.code==="Space"&&e.target===document.body){e.preventDefault();post(st==="LISTENING"?"/api/stop":"/api/start")}});
+async function tick(){
+ try{const s=await(await fetch("/api/state")).json();st=s.state;
+  document.body.dataset.s=st;$("state").textContent=L[st]||st;$("notice").textContent=s.notice;
+  $("go").disabled=st!=="READY";$("end").disabled=st!=="LISTENING";$("new").disabled=st!=="READY";
+  lv.push(st==="LISTENING"?s.level:0);lv.shift();
+  if(s.history.length!==n){n=s.history.length;$("log").innerHTML="";
+   s.history.forEach(m=>{const d=document.createElement("div");d.className="m "+m.role;d.textContent=m.text;$("log").appendChild(d)});
+   $("log").scrollTop=1e9}
+ }catch(e){$("state").textContent="SERVEUR HORS LIGNE"}
+ draw();setTimeout(tick,100)}
+function draw(){const c=getComputedStyle(document.body).getPropertyValue("--c");
+ g.clearRect(0,0,560,70);g.fillStyle=c;
+ lv.forEach((v,i)=>{const h=Math.max(3,v*64);g.fillRect(i*10,35-h/2,6,h)})}
+post("/api/reset");   // page vide à chaque ouverture
+tick();
+</script></body></html>

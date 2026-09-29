@@ -1,0 +1,5 @@
+# --- Ajouts pour l'intégration MCP (Gmail + Google Calendar) ---
+google-api-python-client   # accès aux APIs Gmail et Google Calendar
+google-auth-httplib2       # transport HTTP pour l'auth Google
+google-auth-oauthlib       # flux OAuth2 (autorisation utilisateur)
+mcp                        # SDK officiel MCP (serveur d'outils, optionnel)
